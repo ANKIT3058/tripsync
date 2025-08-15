@@ -1,0 +1,129 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("POSTGRES_PRISMA_URL") // uses connection pooling
+  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  passwordHash String   @map("password_hash")
+  name        String
+  role        Role     @default(USER)
+  suspended   Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  bookings    Booking[]
+  locks       Lock[]
+
+  @@map("users")
+}
+
+model Hotel {
+  id          String   @id @default(cuid())
+  externalId  String   @unique @map("external_id")
+  name        String
+  description String?
+  location    String
+  city        String
+  country     String
+  address     String
+  latitude    Float?
+  longitude   Float?
+  photos      String[] @default([])
+  amenities   String[] @default([])
+  approved    Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  rooms       Room[]
+  bookings    Booking[]
+
+  @@index([city])
+  @@index([approved])
+  @@map("hotels")
+}
+
+model Room {
+  id              String   @id @default(cuid())
+  hotelId         String   @map("hotel_id")
+  externalRoomId  String   @map("external_room_id")
+  name            String
+  description     String?
+  capacity        Int
+  amenities       String[] @default([])
+  photos          String[] @default([])
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  hotel           Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  bookings        Booking[]
+  locks           Lock[]
+
+  @@unique([hotelId, externalRoomId])
+  @@map("rooms")
+}
+
+model Booking {
+  id                  String        @id @default(cuid())
+  userId              String        @map("user_id")
+  hotelId             String        @map("hotel_id")
+  roomId              String        @map("room_id")
+  checkIn             DateTime      @map("check_in") @db.Date
+  checkOut            DateTime      @map("check_out") @db.Date
+  guests              Int
+  totalAmount         Decimal       @map("total_amount") @db.Decimal(10, 2)
+  currency            String        @db.VarChar(3)
+  status              BookingStatus @default(PENDING)
+  paymentId           String?       @map("payment_id")
+  razorpayOrderId     String?       @map("razorpay_order_id")
+  externalBookingId   String?       @map("external_booking_id")
+  errorMessage        String?       @map("error_message")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hotel               Hotel         @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  room                Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("bookings")
+}
+
+model Lock {
+  id        String   @id @default(cuid())
+  roomId    String   @map("room_id")
+  userId    String   @map("user_id")
+  checkIn   DateTime @map("check_in") @db.Date
+  checkOut  DateTime @map("check_out") @db.Date
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, checkIn, checkOut])
+  @@index([expiresAt])
+  @@map("locks")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  FAILED
+}
