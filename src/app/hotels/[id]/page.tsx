@@ -98,12 +98,12 @@ export default function HotelDetailsPage() {
   useEffect(() => {
     const fetchHotelDetails = async () => {
       try {
-        const params = new URLSearchParams()
-        if (checkIn) params.append('checkIn', checkIn)
-        if (checkOut) params.append('checkOut', checkOut)
-        if (guests) params.append('guests', guests.toString())
+        const query = new URLSearchParams()
+        if (checkIn) query.append('checkIn', checkIn)
+        if (checkOut) query.append('checkOut', checkOut)
+        if (guests) query.append('guests', guests.toString())
 
-        const response = await fetch(`/api/hotels/${params.id}?${params.toString()}`)
+        const response = await fetch(`/api/hotels/${params.id}?${query.toString()}`)
         
         if (!response.ok) {
           throw new Error('Failed to fetch hotel details')
@@ -222,6 +222,7 @@ export default function HotelDetailsPage() {
         <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-8">
           <div className="grid md:grid-cols-2 gap-0">
             <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={mainImage}
                 alt={hotel.name}

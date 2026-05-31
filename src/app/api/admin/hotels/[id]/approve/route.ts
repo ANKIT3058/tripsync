@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const adminCheck = await requireAdmin()
   if (adminCheck instanceof NextResponse) {
@@ -12,8 +12,9 @@ export async function POST(
   }
 
   try {
+    const { id } = await params
     const hotel = await prisma.hotel.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!hotel) {
@@ -24,7 +25,7 @@ export async function POST(
     }
 
     const updatedHotel = await prisma.hotel.update({
-      where: { id: params.id },
+      where: { id },
       data: { approved: true }
     })
 
@@ -43,7 +44,7 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const adminCheck = await requireAdmin()
   if (adminCheck instanceof NextResponse) {
@@ -51,8 +52,9 @@ export async function DELETE(
   }
 
   try {
+    const { id } = await params
     const hotel = await prisma.hotel.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!hotel) {
@@ -63,7 +65,7 @@ export async function DELETE(
     }
 
     const updatedHotel = await prisma.hotel.update({
-      where: { id: params.id },
+      where: { id },
       data: { approved: false }
     })
 

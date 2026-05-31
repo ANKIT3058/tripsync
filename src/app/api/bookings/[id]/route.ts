@@ -5,11 +5,11 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -17,10 +17,11 @@ export async function GET(
       )
     }
 
+    const { id } = await params
     const booking = await prisma.booking.findUnique({
-      where: { 
-        id: params.id,
-        userId: (session.user as any).id
+      where: {
+        id,
+        userId: session.user.id
       },
       include: {
         hotel: true,

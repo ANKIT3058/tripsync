@@ -1,13 +1,36 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Header from '@/components/layout/Header'
 
+interface RazorpayResponse {
+  razorpay_order_id: string
+  razorpay_payment_id: string
+  razorpay_signature: string
+}
+
+interface RazorpayOptions {
+  key: string
+  amount: number
+  currency: string
+  name: string
+  description: string
+  order_id: string
+  handler: (response: RazorpayResponse) => void
+  prefill: { name: string; email: string }
+  theme: { color: string }
+  modal: { ondismiss: () => void }
+}
+
+interface RazorpayInstance {
+  open: () => void
+}
+
 declare global {
   interface Window {
-    Razorpay: any
+    Razorpay: new (options: RazorpayOptions) => RazorpayInstance
   }
 }
 
@@ -23,6 +46,90 @@ export default function PaymentPage() {
 
   const orderId = params.orderId as string
   const lockId = searchParams.get('lockId')
+
+  const verifyPayment = useCallback(async (response: RazorpayResponse) => {
+    try {
+      const verificationResponse = await fetch('/api/payments/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_signature: response.razorpay_signature,
+          lockId
+        }),
+      })
+
+      const verificationData = await verificationResponse.json()
+
+      if (!verificationResponse.ok) {
+        throw new Error(verificationData.error || 'Payment verification failed')
+      }
+
+      router.push(`/bookings/success/${verificationData.booking.id}`)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Payment verification failed')
+      setProcessing(false)
+    }
+  }, [lockId, router])
+
+  const handlePayment = useCallback(async () => {
+    setProcessing(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lockId,
+          amount: 100, // This should come from the lock data
+          currency: 'USD'
+        }),
+      })
+
+      const orderData = await response.json()
+
+      if (!response.ok) {
+        throw new Error(orderData.error || 'Failed to create payment order')
+      }
+
+      const options = {
+        key: orderData.key,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'TripSync',
+        description: 'Hotel Booking Payment',
+        order_id: orderData.orderId,
+        handler: async function (response: RazorpayResponse) {
+          await verifyPayment(response)
+        },
+        prefill: {
+          name: session?.user?.name || '',
+          email: session?.user?.email || '',
+        },
+        theme: {
+          color: '#2563eb'
+        },
+        modal: {
+          ondismiss: function() {
+            setProcessing(false)
+            setError('Payment was cancelled')
+          }
+        }
+      }
+
+      const paymentObject = new window.Razorpay(options)
+      paymentObject.open()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Payment initialization failed')
+      setProcessing(false)
+    }
+  }, [lockId, session, verifyPayment])
 
   useEffect(() => {
     if (!session) {
@@ -59,91 +166,7 @@ export default function PaymentPage() {
     }
 
     initializePayment()
-  }, [session, orderId, router])
-
-  const handlePayment = async () => {
-    setProcessing(true)
-    setError('')
-
-    try {
-      const response = await fetch('/api/payments/create-order', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          lockId,
-          amount: 100, // This should come from the lock data
-          currency: 'USD'
-        }),
-      })
-
-      const orderData = await response.json()
-
-      if (!response.ok) {
-        throw new Error(orderData.error || 'Failed to create payment order')
-      }
-
-      const options = {
-        key: orderData.key,
-        amount: orderData.amount,
-        currency: orderData.currency,
-        name: 'TripSync',
-        description: 'Hotel Booking Payment',
-        order_id: orderData.orderId,
-        handler: async function (response: any) {
-          await verifyPayment(response)
-        },
-        prefill: {
-          name: session?.user?.name || '',
-          email: session?.user?.email || '',
-        },
-        theme: {
-          color: '#2563eb'
-        },
-        modal: {
-          ondismiss: function() {
-            setProcessing(false)
-            setError('Payment was cancelled')
-          }
-        }
-      }
-
-      const paymentObject = new window.Razorpay(options)
-      paymentObject.open()
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Payment initialization failed')
-      setProcessing(false)
-    }
-  }
-
-  const verifyPayment = async (response: any) => {
-    try {
-      const verificationResponse = await fetch('/api/payments/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          razorpay_order_id: response.razorpay_order_id,
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_signature: response.razorpay_signature,
-          lockId
-        }),
-      })
-
-      const verificationData = await verificationResponse.json()
-
-      if (!verificationResponse.ok) {
-        throw new Error(verificationData.error || 'Payment verification failed')
-      }
-
-      router.push(`/bookings/success/${verificationData.booking.id}`)
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Payment verification failed')
-      setProcessing(false)
-    }
-  }
+  }, [session, orderId, router, handlePayment])
 
   const handleRetry = () => {
     setError('')

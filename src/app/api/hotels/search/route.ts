@@ -37,6 +37,8 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    console.log('Found hotels in local DB:', approvedHotels);
+
     const hotelsWithPricing = await Promise.all(
       approvedHotels.map(async (hotel) => {
         try {
@@ -49,6 +51,8 @@ export async function GET(request: NextRequest) {
           })
 
           const externalHotel = externalHotels.find(h => h.property_id === hotel.externalId)
+          console.log("external hotels: ",externalHotel)
+
 
           return {
             ...hotel,

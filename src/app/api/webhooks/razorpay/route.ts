@@ -3,6 +3,17 @@ import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { releaseLock } from '@/lib/locks'
 
+interface RazorpayPaymentEntity {
+  id: string
+  order_id: string
+  status?: string
+  error_description?: string | null
+  notes?: {
+    lockId?: string
+    [key: string]: string | undefined
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text()
@@ -55,7 +66,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handlePaymentCaptured(payment: any) {
+async function handlePaymentCaptured(payment: RazorpayPaymentEntity) {
   try {
     const booking = await prisma.booking.findFirst({
       where: {
@@ -93,7 +104,7 @@ async function handlePaymentCaptured(payment: any) {
   }
 }
 
-async function handlePaymentFailed(payment: any) {
+async function handlePaymentFailed(payment: RazorpayPaymentEntity) {
   try {
     const booking = await prisma.booking.findFirst({
       where: {

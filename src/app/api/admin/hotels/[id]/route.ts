@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const adminCheck = await requireAdmin()
   if (adminCheck instanceof NextResponse) {
@@ -12,8 +12,9 @@ export async function GET(
   }
 
   try {
+    const { id } = await params
     const hotel = await prisma.hotel.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         rooms: true,
         bookings: {
@@ -51,7 +52,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const adminCheck = await requireAdmin()
   if (adminCheck instanceof NextResponse) {
@@ -59,10 +60,11 @@ export async function PUT(
   }
 
   try {
+    const { id } = await params
     const updateData = await request.json()
-    
+
     const hotel = await prisma.hotel.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!hotel) {
@@ -73,7 +75,7 @@ export async function PUT(
     }
 
     const updatedHotel = await prisma.hotel.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...updateData,
         latitude: updateData.latitude ? parseFloat(updateData.latitude) : null,
@@ -98,7 +100,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const adminCheck = await requireAdmin()
   if (adminCheck instanceof NextResponse) {
@@ -106,8 +108,9 @@ export async function DELETE(
   }
 
   try {
+    const { id } = await params
     const hotel = await prisma.hotel.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         bookings: {
           where: {
@@ -134,7 +137,7 @@ export async function DELETE(
     }
 
     await prisma.hotel.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json({

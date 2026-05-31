@@ -105,6 +105,7 @@ export default function RoomCard({ room, onBookRoom, loading = false }: RoomCard
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="md:flex">
         <div className="md:w-1/3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={mainImage}
             alt={room.name}

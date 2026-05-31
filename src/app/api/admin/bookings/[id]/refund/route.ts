@@ -5,7 +5,7 @@ import { refundPayment } from '@/lib/razorpay'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const adminCheck = await requireAdmin()
   if (adminCheck instanceof NextResponse) {
@@ -13,10 +13,11 @@ export async function POST(
   }
 
   try {
+    const { id } = await params
     const { amount, reason } = await request.json()
 
     const booking = await prisma.booking.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: {
           select: {
@@ -53,7 +54,7 @@ export async function POST(
 
     // Update booking status
     const updatedBooking = await prisma.booking.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: 'CANCELLED',
         errorMessage: reason ? `Refunded by admin: ${reason}` : 'Refunded by admin'
@@ -65,7 +66,7 @@ export async function POST(
       booking: updatedBooking,
       refund: {
         id: refund.id,
-        amount: refund.amount / 100, // Convert from paise to currency
+        amount: refund.amount ? Number(refund.amount) / 100 : null,
         currency: refund.currency,
         status: refund.status
       }

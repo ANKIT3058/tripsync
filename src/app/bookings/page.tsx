@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/layout/Header'
@@ -41,18 +41,7 @@ export default function BookingsPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [statusFilter, setStatusFilter] = useState('')
 
-  useEffect(() => {
-    if (status === 'loading') return
-    
-    if (!session) {
-      router.push('/auth/signin')
-      return
-    }
-
-    fetchBookings()
-  }, [session, status, router, currentPage, statusFilter])
-
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
       const params = new URLSearchParams({
         page: currentPage.toString(),
@@ -64,7 +53,7 @@ export default function BookingsPage() {
       }
 
       const response = await fetch(`/api/bookings?${params.toString()}`)
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch bookings')
       }
@@ -78,7 +67,18 @@ export default function BookingsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentPage, statusFilter])
+
+  useEffect(() => {
+    if (status === 'loading') return
+
+    if (!session) {
+      router.push('/auth/signin')
+      return
+    }
+
+    fetchBookings()
+  }, [session, status, router, fetchBookings])
 
   const getStatusBadge = (status: string) => {
     const statusStyles = {
@@ -200,6 +200,7 @@ export default function BookingsPage() {
               <div key={booking.id} className="bg-white rounded-lg shadow-sm border overflow-hidden">
                 <div className="md:flex">
                   <div className="md:w-48 h-48 md:h-auto">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={booking.hotel.photos[0] || '/placeholder-hotel.jpg'}
                       alt={booking.hotel.name}

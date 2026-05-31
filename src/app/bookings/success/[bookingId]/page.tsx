@@ -205,7 +205,7 @@ export default function BookingSuccessPage() {
         </div>
 
         <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-3">What's Next?</h3>
+          <h3 className="text-lg font-semibold text-blue-900 mb-3">What&apos;s Next?</h3>
           <ul className="space-y-2 text-blue-800">
             <li className="flex items-center">
               <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

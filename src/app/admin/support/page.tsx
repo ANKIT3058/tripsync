@@ -1,9 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState, useCallback } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import AdminLayout from '@/components/admin/AdminLayout'
 import Link from 'next/link'
+// --- 1. Import necessary icons ---
+import {
+  Search, XCircle, AlertTriangle, LoaderCircle, ServerCrash, Inbox,
+  ChevronLeft, ChevronRight, ShieldAlert, CheckCircle2, ArrowRight
+} from 'lucide-react'
 
+// --- Interface remains the same ---
 interface Booking {
   id: string
   status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'FAILED'
@@ -33,248 +40,206 @@ interface Booking {
 }
 
 export default function AdminSupportPage() {
+  return (
+    <AdminLayout title="Support & Issue Resolution">
+      <Suspense fallback={<SupportSkeleton />}>
+        <AdminSupportContent />
+      </Suspense>
+    </AdminLayout>
+  )
+}
+
+function SupportSkeleton() {
+  return (
+    <div className="text-center py-20 flex flex-col items-center">
+      <LoaderCircle className="animate-spin h-10 w-10 text-indigo-500" />
+      <p className="mt-4 text-slate-500">Loading support dashboard...</p>
+    </div>
+  )
+}
+
+function AdminSupportContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
+
+  // --- 2. State management with URL synchronization ---
+  const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
   const [totalPages, setTotalPages] = useState(1)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('FAILED')
-  const [showIssuesOnly, setShowIssuesOnly] = useState(true)
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'FAILED')
+  const [showIssuesOnly, setShowIssuesOnly] = useState(searchParams.get('issues') !== 'false')
+  
+  // --- 3. Debounced search for performance ---
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
 
   useEffect(() => {
-    fetchBookings()
-  }, [currentPage, searchQuery, statusFilter, showIssuesOnly])
+    const handler = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: '10'
       })
-
-      if (searchQuery) params.append('search', searchQuery)
+      if (debouncedSearchQuery) params.append('search', debouncedSearchQuery)
       if (statusFilter) params.append('status', statusFilter)
       if (showIssuesOnly) params.append('issues', 'true')
+      
+      router.push(`/admin/support?${params.toString()}`, { scroll: false })
 
       const response = await fetch(`/api/admin/bookings?${params.toString()}`)
+      if (!response.ok) throw new Error('Failed to fetch bookings')
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch bookings')
-      }
-
       const data = await response.json()
       setBookings(data.bookings)
       setTotalPages(data.pagination.totalPages)
-    } catch (error) {
-      setError('Failed to load bookings')
-      console.error('Error fetching bookings:', error)
+      setError('')
+    } catch {
+      setError('Failed to load bookings. Please try again.')
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentPage, debouncedSearchQuery, statusFilter, showIssuesOnly, router])
 
-  const getStatusBadge = (status: string) => {
-    const statusStyles = {
-      PENDING: 'bg-yellow-100 text-yellow-800',
-      CONFIRMED: 'bg-green-100 text-green-800',
-      CANCELLED: 'bg-gray-100 text-gray-800',
-      FAILED: 'bg-red-100 text-red-800'
+  useEffect(() => {
+    fetchBookings()
+  }, [fetchBookings])
+
+  // --- 4. Restyled status and issue badges ---
+  const getStatusBadge = (status: Booking['status']) => {
+    const styles = {
+      PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
+      CONFIRMED: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+      CANCELLED: 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300',
+      FAILED: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
     }
-
-    return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusStyles[status as keyof typeof statusStyles]}`}>
-        {status.charAt(0) + status.slice(1).toLowerCase()}
-      </span>
-    )
+    return <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${styles[status]}`}>{status}</span>
   }
 
   const getIssueSeverity = (booking: Booking) => {
     if (booking.status === 'FAILED' && booking.paymentId) {
-      return { level: 'high', text: 'Payment succeeded but booking failed', color: 'text-red-600' }
+      return { icon: AlertTriangle, text: 'Payment captured, booking failed', color: 'text-red-600 dark:text-red-400' }
     }
     if (booking.status === 'FAILED') {
-      return { level: 'medium', text: 'Booking failed', color: 'text-orange-600' }
+      return { icon: XCircle, text: 'Booking failed', color: 'text-orange-600 dark:text-orange-400' }
     }
     if (booking.errorMessage) {
-      return { level: 'low', text: 'Has error message', color: 'text-yellow-600' }
+      return { icon: AlertTriangle, text: 'Has error message', color: 'text-yellow-600 dark:text-yellow-400' }
     }
-    return { level: 'none', text: 'No issues', color: 'text-gray-600' }
+    return { icon: CheckCircle2, text: 'No issues detected', color: 'text-green-600 dark:text-green-400' }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
+  const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric'
+  })
+
+  // --- 5. Reusable Pagination component ---
+  const Pagination = () => (
+    <div className="px-6 py-4 border-t dark:border-slate-700 flex items-center justify-between">
+      <span className="text-sm text-slate-600 dark:text-slate-400">Page {currentPage} of {totalPages}</span>
+      <nav className="flex items-center space-x-2">
+        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 border border-slate-300 dark:border-slate-600 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition">
+          <ChevronLeft size={18} />
+        </button>
+        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 border border-slate-300 dark:border-slate-600 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition">
+          <ChevronRight size={18} />
+        </button>
+      </nav>
+    </div>
+  )
 
   return (
-    <AdminLayout title="Support & Issue Resolution">
-      <div className="space-y-6">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-blue-900 mb-3">Issue Resolution Tools</h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-white p-4 rounded-md border">
-              <h3 className="font-medium text-gray-900 mb-2">Manual Confirmation</h3>
-              <p className="text-sm text-gray-600 mb-3">Manually confirm failed bookings that should be valid</p>
-              <div className="text-xs text-gray-500">Available in booking details</div>
+    <div className="space-y-6">
+        {/* --- 6. Redesigned header/info card --- */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 bg-indigo-100 dark:bg-indigo-900/40 p-3 rounded-lg">
+              <ShieldAlert className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
             </div>
-            <div className="bg-white p-4 rounded-md border">
-              <h3 className="font-medium text-gray-900 mb-2">Refund Processing</h3>
-              <p className="text-sm text-gray-600 mb-3">Issue refunds for problematic bookings via Razorpay</p>
-              <div className="text-xs text-gray-500">Integrated with payment gateway</div>
-            </div>
-            <div className="bg-white p-4 rounded-md border">
-              <h3 className="font-medium text-gray-900 mb-2">External Dashboard</h3>
-              <p className="text-sm text-gray-600 mb-3">Access Razorpay dashboard for payment details</p>
-              <a
-                href="https://dashboard.razorpay.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary-600 hover:text-primary-700 text-sm font-medium"
-              >
-                Open Razorpay Dashboard →
-              </a>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-200">Issue Resolution Center</h2>
+              <p className="mt-1 text-slate-600 dark:text-slate-400">
+                This dashboard automatically flags bookings that require manual attention. Focus on &apos;Failed&apos; bookings, especially those where a payment was captured.
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-6 border-b">
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-              <input
-                type="text"
-                placeholder="Search bookings, users, or hotels..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="">All Statuses</option>
-                <option value="FAILED">Failed</option>
-                <option value="PENDING">Pending</option>
-                <option value="CONFIRMED">Confirmed</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={showIssuesOnly}
-                  onChange={(e) => setShowIssuesOnly(e.target.checked)}
-                  className="mr-2"
-                />
-                <span className="text-sm text-gray-700">Issues only</span>
-              </label>
+        {/* --- 7. Main content card with filters and table --- */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700">
+          <div className="p-6 border-b dark:border-slate-700">
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Bookings Queue</h3>
+              <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <input type="text" placeholder="Search by user, hotel, ID..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 transition" />
+                </div>
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full sm:w-auto px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 transition">
+                  <option value="">All Statuses</option>
+                  <option value="FAILED">Failed</option>
+                  <option value="PENDING">Pending</option>
+                </select>
+                <label className="flex items-center gap-2 whitespace-nowrap text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <input type="checkbox" checked={showIssuesOnly} onChange={(e) => setShowIssuesOnly(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                  Show issues only
+                </label>
+              </div>
             </div>
           </div>
 
           <div className="overflow-x-auto">
-            {loading && (
-              <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-              </div>
-            )}
-
-            {error && (
-              <div className="bg-red-50 border-l-4 border-red-400 p-4 m-6">
-                <p className="text-red-700">{error}</p>
-              </div>
-            )}
-
-            {!loading && bookings.length === 0 && (
-              <div className="text-center py-12">
-                <svg className="mx-auto h-12 w-12 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <p className="mt-2 text-lg text-gray-600">No issues found!</p>
-                <p className="text-gray-500">All bookings are running smoothly</p>
-              </div>
-            )}
-
-            {!loading && bookings.length > 0 && (
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+            {loading ? (
+              <div className="text-center py-20 flex flex-col items-center"><LoaderCircle className="animate-spin h-10 w-10 text-indigo-500" /><p className="mt-4 text-slate-500">Loading bookings...</p></div>
+            ) : error ? (
+              <div className="text-center py-20 flex flex-col items-center m-6 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg p-6"><ServerCrash className="h-10 w-10" /><p className="mt-4 font-semibold">{error}</p></div>
+            ) : bookings.length === 0 ? (
+              <div className="text-center py-20 flex flex-col items-center"><Inbox className="h-10 w-10 text-slate-400" /><p className="mt-4 text-slate-500">No bookings found for the selected filters.</p></div>
+            ) : (
+              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead className="bg-slate-50 dark:bg-slate-700/50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Booking Details
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status & Issue
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Created
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    {['Booking', 'User', 'Issue Details', 'Amount', 'Date'].map(h => <th key={h} className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>)}
+                    <th className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
                   {bookings.map((booking) => {
-                    const issue = getIssueSeverity(booking)
+                    const issue = getIssueSeverity(booking);
                     return (
-                      <tr key={booking.id} className="hover:bg-gray-50">
+                      <tr key={booking.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{booking.hotel.name}</div>
-                            <div className="text-sm text-gray-500">
-                              {booking.room.name} • {booking.hotel.city}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              ID: {booking.id.substring(0, 8)}...
-                            </div>
-                          </div>
+                          <div className="font-semibold text-slate-900 dark:text-slate-200">{booking.hotel.name}</div>
+                          <div className="text-sm text-slate-500 dark:text-slate-400">{booking.room.name}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{booking.user.name}</div>
-                            <div className="text-sm text-gray-500">{booking.user.email}</div>
-                          </div>
+                          <div className="font-semibold text-slate-900 dark:text-slate-200">{booking.user.name}</div>
+                          <div className="text-sm text-slate-500 dark:text-slate-400">{booking.user.email}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="space-y-1">
+                          <div className="flex items-center gap-2">
                             {getStatusBadge(booking.status)}
-                            <div className={`text-xs ${issue.color}`}>
-                              {issue.text}
+                            <div className={`flex items-center gap-1.5 text-sm font-medium ${issue.color}`}>
+                              <issue.icon size={16} />
+                              <span>{issue.text}</span>
                             </div>
-                            {booking.errorMessage && (
-                              <div className="text-xs text-red-600 max-w-xs truncate" title={booking.errorMessage}>
-                                {booking.errorMessage}
-                              </div>
-                            )}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">${booking.totalAmount}</div>
-                          <div className="text-xs text-gray-500">{booking.currency}</div>
-                          {booking.paymentId && (
-                            <div className="text-xs text-green-600">Payment captured</div>
-                          )}
+                          <div className="font-semibold text-slate-900 dark:text-slate-200">{new Intl.NumberFormat('en-US', { style: 'currency', currency: booking.currency }).format(booking.totalAmount)}</div>
+                          {booking.paymentId && <div className="text-xs font-medium text-green-600 dark:text-green-400">Paid</div>}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(booking.createdAt)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                          <Link
-                            href={`/admin/support/${booking.id}`}
-                            className="text-primary-600 hover:text-primary-900"
-                          >
-                            Resolve
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">{formatDate(booking.createdAt)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <Link href={`/admin/support/${booking.id}`} className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white font-semibold text-sm rounded-md hover:bg-indigo-700 transition-colors">
+                            Resolve <ArrowRight size={16} />
                           </Link>
                         </td>
                       </tr>
@@ -284,42 +249,8 @@ export default function AdminSupportPage() {
               </table>
             )}
           </div>
-
-          {totalPages > 1 && (
-            <div className="px-6 py-4 border-t flex justify-center">
-              <nav className="flex space-x-2">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-2 border rounded-md ${
-                      page === currentPage
-                        ? 'bg-primary-600 text-white border-primary-600'
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </nav>
-            </div>
-          )}
+          {!loading && !error && bookings.length > 0 && totalPages > 1 && <Pagination />}
         </div>
-      </div>
-    </AdminLayout>
+    </div>
   )
 }

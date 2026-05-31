@@ -61,7 +61,7 @@ export async function getRazorpayPayment(paymentId: string) {
 
 export async function refundPayment(paymentId: string, amount?: number) {
   try {
-    const refundData: any = {}
+    const refundData: { amount?: number } = {}
     if (amount) {
       refundData.amount = Math.round(amount * 100) // Convert to paise
     }

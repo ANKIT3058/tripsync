@@ -2,7 +2,6 @@ import { EPSHotel, EPSAvailability } from '@/types'
 
 const EPS_BASE_URL = process.env.EPS_RAPID_BASE_URL || 'https://test.ean.com/v3'
 const EPS_API_KEY = process.env.EPS_RAPID_API_KEY
-const EPS_HOST = process.env.EPS_RAPID_API_HOST
 
 export async function searchHotels(params: {
   location: string;
@@ -92,11 +91,24 @@ export async function getHotelDetails(params: {
 
 export async function searchRegions(query: string) {
   try {
+    // Validate API configuration
+    if (!EPS_API_KEY) {
+      console.error('EPS_RAPID_API_KEY is not configured')
+      throw new Error('EPS Rapid API key is not configured')
+    }
+
+    if (!query || query.trim().length === 0) {
+      throw new Error('Query parameter is required')
+    }
+
     const queryParams = new URLSearchParams({
       language: 'en-US',
       include: 'standard',
-      query: query
+      query: query.trim()
     })
+
+    console.log(`Searching regions for: ${query}`)
+    console.log(`EPS API URL: ${EPS_BASE_URL}/regions?${queryParams}`)
 
     const response = await fetch(`${EPS_BASE_URL}/regions?${queryParams}`, {
       method: 'GET',
@@ -108,14 +120,34 @@ export async function searchRegions(query: string) {
       }
     })
 
+    console.log(`EPS API Response Status: ${response.status}`)
+
     if (!response.ok) {
-      throw new Error(`EPS API error: ${response.status}`)
+      const errorText = await response.text()
+      console.error(`EPS API error response: ${errorText}`)
+      throw new Error(`EPS API error: ${response.status} - ${response.statusText}`)
     }
 
     const data = await response.json()
+    console.log(`EPS API Response:`, data)
+    
     return data.regions || []
   } catch (error) {
     console.error('Error searching regions:', error)
+    
+    // Return mock data for development/testing if API is not available
+    if (process.env.NODE_ENV === 'development' && !EPS_API_KEY) {
+      console.log('Returning mock regions data for development')
+      return [
+        {
+          region_id: 'mock_6054439',
+          name: query.charAt(0).toUpperCase() + query.slice(1),
+          country_code: 'US',
+          type: 'city'
+        }
+      ]
+    }
+    
     throw error
   }
 }

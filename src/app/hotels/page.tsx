@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { Search, AlertCircle, BedDouble } from 'lucide-react'
 import Header from '@/components/layout/Header'
 import SearchForm from '@/components/ui/SearchForm'
 import HotelCard from '@/components/ui/HotelCard'
@@ -21,6 +22,28 @@ interface Hotel {
 }
 
 export default function HotelsPage() {
+  return (
+    <Suspense fallback={<HotelsPageSkeleton />}>
+      <HotelsPageContent />
+    </Suspense>
+  )
+}
+
+function HotelsPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <Header />
+      <div className="bg-gradient-to-br from-primary-700 via-primary-600 to-primary-800 text-white py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="h-9 w-48 bg-white/20 rounded-md animate-pulse" />
+          <div className="mt-3 h-5 w-72 bg-white/20 rounded-md animate-pulse" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function HotelsPageContent() {
   const searchParams = useSearchParams()
   const [hotels, setHotels] = useState<Hotel[]>([])
   const [loading, setLoading] = useState(false)
@@ -49,16 +72,16 @@ export default function HotelsPage() {
       })
 
       const response = await fetch(`/api/hotels/search?${params.toString()}`)
-      
+
       if (!response.ok) {
         throw new Error('Failed to search hotels')
       }
 
       const data = await response.json()
       setHotels(data.hotels || [])
-    } catch (error) {
+    } catch (err) {
       setError('Failed to load hotels. Please try again.')
-      console.error('Error searching hotels:', error)
+      console.error('Error searching hotels:', err)
     } finally {
       setLoading(false)
     }
@@ -71,56 +94,92 @@ export default function HotelsPage() {
   }, [location, checkIn, checkOut, guests])
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <Header />
-      
-      <div className="bg-primary-600 text-white py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold mb-6">Find Hotels</h1>
-          <SearchForm onSearch={searchHotels} />
-        </div>
-      </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Hero / search band: rich gradient ensures high contrast for the white heading */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-primary-700 via-primary-600 to-primary-800 text-white">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-20"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.25), transparent 40%), radial-gradient(circle at 80% 60%, rgba(255,255,255,0.18), transparent 50%)',
+          }}
+          aria-hidden
+        />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
+            Find Hotels
+          </h1>
+          <p className="mt-2 text-primary-50/90 max-w-2xl">
+            Search thousands of stays. Compare rates instantly, book in seconds.
+          </p>
+          <div className="mt-8">
+            <SearchForm onSearch={searchHotels} />
+          </div>
+        </div>
+      </section>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {location && (
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-              Hotels in {location}
-            </h2>
-            <p className="text-gray-600">
+          <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-semibold text-slate-900">
+                Hotels in <span className="text-primary-700">{location}</span>
+              </h2>
               {checkIn && checkOut && (
-                <>Check-in: {new Date(checkIn).toLocaleDateString()} • Check-out: {new Date(checkOut).toLocaleDateString()} • {guests} guest{guests !== 1 ? 's' : ''}</>
+                <p className="mt-1 text-sm text-slate-600">
+                  {new Date(checkIn).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  {' '}—{' '}
+                  {new Date(checkOut).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {' '}·{' '}
+                  {guests} guest{guests !== 1 ? 's' : ''}
+                </p>
               )}
-            </p>
+            </div>
+            {!loading && hotels.length > 0 && (
+              <p className="text-sm text-slate-500">
+                Showing <span className="font-medium text-slate-800">{hotels.length}</span> result{hotels.length !== 1 ? 's' : ''}
+              </p>
+            )}
           </div>
         )}
 
         {loading && (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-            <p className="mt-2 text-gray-600">Searching hotels...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="h-48 bg-slate-200 animate-pulse" />
+                <div className="p-5 space-y-3">
+                  <div className="h-5 bg-slate-200 rounded animate-pulse w-3/4" />
+                  <div className="h-4 bg-slate-200 rounded animate-pulse w-1/2" />
+                  <div className="h-4 bg-slate-200 rounded animate-pulse w-full" />
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-            <div className="flex">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-              <p className="ml-3 text-red-700">{error}</p>
-            </div>
+          <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 mb-6">
+            <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
+            <p className="text-sm text-red-700">{error}</p>
           </div>
         )}
 
         {!loading && !error && hotels.length === 0 && location && (
-          <div className="text-center py-12">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-            <p className="mt-2 text-lg text-gray-600">No hotels found for your search criteria</p>
-            <p className="text-gray-500">Try adjusting your search parameters</p>
-          </div>
+          <EmptyState
+            title="No hotels found"
+            description="We couldn't find stays matching your search. Try different dates, broaden your location, or adjust the guest count."
+          />
+        )}
+
+        {!loading && !error && !location && (
+          <EmptyState
+            title="Start your search"
+            description="Pick a destination and travel dates above to discover available hotels."
+            icon={<Search className="h-7 w-7 text-primary-600" />}
+          />
         )}
 
         {!loading && hotels.length > 0 && (
@@ -149,6 +208,26 @@ export default function HotelsPage() {
           </div>
         )}
       </main>
+    </div>
+  )
+}
+
+function EmptyState({
+  title,
+  description,
+  icon,
+}: {
+  title: string
+  description: string
+  icon?: React.ReactNode
+}) {
+  return (
+    <div className="text-center py-16 px-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
+      <div className="mx-auto h-14 w-14 rounded-full bg-primary-50 flex items-center justify-center">
+        {icon ?? <BedDouble className="h-7 w-7 text-primary-600" />}
+      </div>
+      <h3 className="mt-4 text-lg font-semibold text-slate-900">{title}</h3>
+      <p className="mt-1 text-sm text-slate-600 max-w-md mx-auto">{description}</p>
     </div>
   )
 }

@@ -5,11 +5,11 @@ import { validateLock } from '@/lib/locks'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -17,7 +17,8 @@ export async function GET(
       )
     }
 
-    const lock = await validateLock(params.id, (session.user as any).id)
+    const { id } = await params
+    const lock = await validateLock(id, session.user.id!)
 
     const lockData = {
       id: lock.id,

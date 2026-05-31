@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const adminCheck = await requireAdmin()
   if (adminCheck instanceof NextResponse) {
@@ -12,8 +12,9 @@ export async function GET(
   }
 
   try {
+    const { id } = await params
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         bookings: {
           include: {
@@ -45,7 +46,7 @@ export async function GET(
     }
 
     // Don't return password hash
-    const { passwordHash, ...userData } = user
+    const { passwordHash: _passwordHash, ...userData } = user
 
     return NextResponse.json(userData)
   } catch (error) {
@@ -59,7 +60,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const adminCheck = await requireAdmin()
   if (adminCheck instanceof NextResponse) {
@@ -67,10 +68,11 @@ export async function PUT(
   }
 
   try {
+    const { id } = await params
     const updateData = await request.json()
-    
+
     // Prevent admin from updating their own role or suspension status
-    if (params.id === (adminCheck.user as any).id) {
+    if (id === (adminCheck.user as any).id) {
       delete updateData.role
       delete updateData.suspended
     }
@@ -80,7 +82,7 @@ export async function PUT(
     delete updateData.password
 
     const user = await prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!user) {
@@ -91,7 +93,7 @@ export async function PUT(
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       select: {
         id: true,

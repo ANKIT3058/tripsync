@@ -12,7 +12,7 @@ export async function requireAdmin() {
     )
   }
 
-  if ((session.user as any).role !== 'ADMIN') {
+  if (session.user.role !== 'ADMIN') {
     return NextResponse.json(
       { error: 'Admin access required' },
       { status: 403 }

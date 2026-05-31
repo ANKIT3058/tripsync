@@ -71,6 +71,9 @@ export interface Lock {
 export interface EPSHotel {
   property_id: string;
   name: string;
+  descriptions?: {
+    overview?: string;
+  };
   address: {
     line_1: string;
     line_2?: string;
@@ -101,7 +104,7 @@ export interface EPSHotel {
   }>;
   images: Array<{
     links: {
-      70px: {
+      '70px': {
         href: string;
         method: string;
       };
@@ -129,7 +132,7 @@ export interface EPSAvailability {
     }>;
     images: Array<{
       links: {
-        70px: {
+        '70px': {
           href: string;
           method: string;
         };

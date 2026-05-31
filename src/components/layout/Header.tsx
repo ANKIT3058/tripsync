@@ -33,7 +33,7 @@ export default function Header() {
     { href: '/', label: 'Home' },
     { href: '/hotels', label: 'Hotels' },
     ...(session?.user ? [{ href: '/bookings', label: 'My Bookings' }] : []),
-    ...(session?.user && (session.user as any).role === 'ADMIN'
+    ...(session?.user && session.user.role === 'ADMIN'
       ? [{ href: '/admin', label: 'Admin Panel' }]
       : []),
   ]
@@ -54,7 +54,7 @@ export default function Header() {
           
           {/* Logo */}
           <Link href="/" className="flex items-center group">
-            <span className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent group-hover:opacity-90 transition-opacity">
+            <span className="text-3xl font-bold bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent group-hover:opacity-90 transition-opacity">
               TripSync
             </span>
           </Link>
@@ -67,7 +67,7 @@ export default function Header() {
                 href={href}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${textColorClass} ${
                   isActiveLink(href)
-                    ? (isScrolled ? 'bg-cyan-400/10 text-cyan-300' : 'bg-cyan-500/10 text-cyan-600')
+                    ? (isScrolled ? 'bg-cyan-400/10 text-cyan-300' : 'bg-primary-600/10 text-cyan-600')
                     : `hover:${isScrolled ? 'bg-slate-700/50' : 'bg-slate-100'} hover:text-cyan-500`
                 }`}
               >
@@ -86,7 +86,7 @@ export default function Header() {
                     <p className={`font-semibold ${isScrolled ? 'text-white' : 'text-slate-900'}`}>
                       {session.user.name?.split(' ')[0]}
                     </p>
-                    {(session.user as any).role === 'ADMIN' && (
+                    {session.user.role === 'ADMIN' && (
                       <p className={`text-xs ${isScrolled ? 'text-cyan-400' : 'text-cyan-600'}`}>Admin</p>
                     )}
                   </div>
@@ -109,7 +109,7 @@ export default function Header() {
                 </Link>
                 <Link
                   href="/auth/signup"
-                  className="px-5 py-2 bg-cyan-500 text-white text-sm font-semibold rounded-md hover:bg-cyan-600 transform hover:scale-105 transition-all duration-300 shadow-sm hover:shadow-lg"
+                  className="px-5 py-2 bg-primary-600 text-white text-sm font-semibold rounded-md hover:bg-cyan-600 transform hover:scale-105 transition-all duration-300 shadow-sm hover:shadow-lg"
                 >
                   Sign Up
                 </Link>
@@ -140,7 +140,7 @@ export default function Header() {
               onClick={() => setIsMobileMenuOpen(false)}
               className={`block px-3 py-3 rounded-md text-base font-medium transition-colors duration-300 ${textColorClass} ${
                   isActiveLink(href)
-                    ? (isScrolled ? 'bg-cyan-400/10 text-cyan-300' : 'bg-cyan-500/10 text-cyan-600')
+                    ? (isScrolled ? 'bg-cyan-400/10 text-cyan-300' : 'bg-primary-600/10 text-cyan-600')
                     : `hover:${isScrolled ? 'bg-slate-700/50' : 'bg-slate-100'} hover:text-cyan-500`
                 }`}
             >
@@ -156,7 +156,7 @@ export default function Header() {
                   <FaUserCircle className={`w-8 h-8 ${isScrolled ? 'text-cyan-300' : 'text-cyan-500'}`} />
                   <div>
                     <p className={`font-semibold ${isScrolled ? 'text-white' : 'text-slate-900'}`}>{session.user.name}</p>
-                     {(session.user as any).role === 'ADMIN' && (
+                     {session.user.role === 'ADMIN' && (
                       <p className={`text-sm ${isScrolled ? 'text-cyan-400' : 'text-cyan-600'}`}>Admin</p>
                     )}
                   </div>
@@ -181,7 +181,7 @@ export default function Header() {
                 <Link
                   href="/auth/signup"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="block text-center w-full px-4 py-3 bg-cyan-500 text-white font-semibold rounded-md hover:bg-cyan-600 transition-all duration-300"
+                  className="block text-center w-full px-4 py-3 bg-primary-600 text-white font-semibold rounded-md hover:bg-cyan-600 transition-all duration-300"
                 >
                   Sign Up
                 </Link>

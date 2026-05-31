@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       roomId,
       checkIn: checkInDate,
       checkOut: checkOutDate,
-      excludeUserId: (session.user as any).id
+      excludeUserId: session.user.id!
     })
 
     if (!availability.available) {
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     const lock = await createRoomLock({
       roomId,
-      userId: (session.user as any).id,
+      userId: session.user.id!,
       checkIn: checkInDate,
       checkOut: checkOutDate
     })

@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const lock = await validateLock(lockId, (session.user as any).id)
+    const lock = await validateLock(lockId, session.user.id!)
 
     if (!lock) {
       return NextResponse.json(
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       receipt,
       notes: {
         lockId,
-        userId: (session.user as any).id,
+        userId: session.user.id!,
         hotelId: lock.room.hotel.id,
         roomId: lock.roomId,
         checkIn: lock.checkIn.toISOString(),
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     const booking = await prisma.booking.create({
       data: {
-        userId: (session.user as any).id,
+        userId: session.user.id!,
         hotelId: lock.room.hotel.id,
         roomId: lock.roomId,
         checkIn: lock.checkIn,

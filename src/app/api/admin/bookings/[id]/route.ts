@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const adminCheck = await requireAdmin()
   if (adminCheck instanceof NextResponse) {
@@ -12,8 +12,9 @@ export async function GET(
   }
 
   try {
+    const { id } = await params
     const booking = await prisma.booking.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: {
           select: {
@@ -47,7 +48,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const adminCheck = await requireAdmin()
   if (adminCheck instanceof NextResponse) {
@@ -55,10 +56,11 @@ export async function PUT(
   }
 
   try {
+    const { id } = await params
     const updateData = await request.json()
-    
+
     const booking = await prisma.booking.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!booking) {
@@ -79,7 +81,7 @@ export async function PUT(
     }
 
     const updatedBooking = await prisma.booking.update({
-      where: { id: params.id },
+      where: { id },
       data: filteredUpdate,
       include: {
         user: {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
   const adminCheck = await requireAdmin()
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit
 
-    const where: any = {}
+    const where: Prisma.UserWhereInput = {}
 
     if (search) {
       where.OR = [
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (role) {
-      where.role = role
+      where.role = role as Prisma.UserWhereInput['role']
     }
 
     if (suspended !== null && suspended !== '') {

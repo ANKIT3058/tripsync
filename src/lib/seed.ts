@@ -7,7 +7,7 @@ export async function seedDatabase() {
 
     // Create admin user
     const adminPassword = await bcrypt.hash('admin123', 12)
-    const admin = await prisma.user.upsert({
+    await prisma.user.upsert({
       where: { email: 'admin@tripsync.com' },
       update: {},
       create: {
@@ -20,7 +20,7 @@ export async function seedDatabase() {
 
     // Create test user
     const userPassword = await bcrypt.hash('user123', 12)
-    const testUser = await prisma.user.upsert({
+    await prisma.user.upsert({
       where: { email: 'user@example.com' },
       update: {},
       create: {

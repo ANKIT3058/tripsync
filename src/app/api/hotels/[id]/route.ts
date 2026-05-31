@@ -4,16 +4,17 @@ import { getHotelDetails } from '@/lib/eps-rapid'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const { searchParams } = new URL(request.url)
     const checkIn = searchParams.get('checkIn')
     const checkOut = searchParams.get('checkOut')
     const guests = searchParams.get('guests')
 
     const hotel = await prisma.hotel.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         rooms: true
       }

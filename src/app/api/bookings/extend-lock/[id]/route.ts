@@ -5,11 +5,11 @@ import { extendLock } from '@/lib/locks'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -17,7 +17,8 @@ export async function POST(
       )
     }
 
-    const lock = await extendLock(params.id, (session.user as any).id)
+    const { id } = await params
+    const lock = await extendLock(id, session.user.id!)
 
     return NextResponse.json({
       message: 'Lock extended successfully',

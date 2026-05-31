@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const booking = await prisma.booking.findFirst({
       where: {
         razorpayOrderId: razorpay_order_id,
-        userId: (session.user as any).id
+        userId: session.user.id!
       },
       include: {
         hotel: true,
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     if (lockId) {
       try {
-        await releaseLock(lockId, (session.user as any).id)
+        await releaseLock(lockId, session.user.id!)
       } catch (error) {
         console.error('Error releasing lock after payment:', error)
       }

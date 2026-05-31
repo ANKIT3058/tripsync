@@ -23,7 +23,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
       return
     }
 
-    if ((session.user as any).role !== 'ADMIN') {
+    if (session.user.role !== 'ADMIN') {
       router.push('/')
       return
     }
@@ -37,7 +37,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     )
   }
 
-  if (!session || (session.user as any).role !== 'ADMIN') {
+  if (!session || session.user.role !== 'ADMIN') {
     return null
   }
 
@@ -62,6 +62,12 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
                   className="block px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
                 >
                   Hotel Management
+                </Link>
+                <Link
+                  href="/admin/hotels/import"
+                  className="block px-3 py-2 ml-4 text-gray-600 hover:bg-gray-100 rounded-md transition-colors text-sm"
+                >
+                  • Bulk Import Hotels
                 </Link>
                 <Link
                   href="/admin/users"

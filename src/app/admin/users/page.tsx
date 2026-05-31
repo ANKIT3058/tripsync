@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import AdminLayout from '@/components/admin/AdminLayout'
 import Link from 'next/link'
 
@@ -24,11 +24,7 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState('')
   const [suspendedFilter, setSuspendedFilter] = useState('')
 
-  useEffect(() => {
-    fetchUsers()
-  }, [currentPage, searchQuery, roleFilter, suspendedFilter])
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams({
@@ -55,7 +51,11 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentPage, searchQuery, roleFilter, suspendedFilter])
+
+  useEffect(() => {
+    fetchUsers()
+  }, [fetchUsers])
 
   const handleSuspendUser = async (userId: string, suspend: boolean) => {
     try {

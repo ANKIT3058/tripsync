@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,12 +22,12 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit
 
-    const where: any = {
-      userId: (session.user as any).id
+    const where: Prisma.BookingWhereInput = {
+      userId: session.user.id
     }
 
     if (status) {
-      where.status = status
+      where.status = status as Prisma.BookingWhereInput['status']
     }
 
     const [bookings, totalCount] = await Promise.all([

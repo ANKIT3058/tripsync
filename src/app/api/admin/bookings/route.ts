@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
   const adminCheck = await requireAdmin()
@@ -18,10 +19,10 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit
 
-    const where: any = {}
+    const where: Prisma.BookingWhereInput = {}
 
     if (status) {
-      where.status = status
+      where.status = status as Prisma.BookingWhereInput['status']
     }
 
     if (issues === 'true') {

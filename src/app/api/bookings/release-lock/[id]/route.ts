@@ -5,11 +5,11 @@ import { releaseLock } from '@/lib/locks'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -17,7 +17,8 @@ export async function DELETE(
       )
     }
 
-    await releaseLock(params.id, (session.user as any).id)
+    const { id } = await params
+    await releaseLock(id, session.user.id!)
 
     return NextResponse.json({
       message: 'Lock released successfully'

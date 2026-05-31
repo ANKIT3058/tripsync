@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await requireAdmin()
   if (session instanceof NextResponse) {
@@ -12,8 +12,9 @@ export async function POST(
   }
 
   try {
+    const { id } = await params
     // Prevent admin from suspending themselves
-    if (params.id === (session.user as any).id) {
+    if (id === session.user.id!) {
       return NextResponse.json(
         { error: 'Cannot suspend your own account' },
         { status: 400 }
@@ -21,7 +22,7 @@ export async function POST(
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!user) {
@@ -39,7 +40,7 @@ export async function POST(
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: { suspended: true },
       select: {
         id: true,
@@ -65,7 +66,7 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await requireAdmin()
   if (session instanceof NextResponse) {
@@ -73,8 +74,9 @@ export async function DELETE(
   }
 
   try {
+    const { id } = await params
     // Prevent admin from unsuspending themselves (they shouldn't be suspended anyway)
-    if (params.id === (session.user as any).id) {
+    if (id === session.user.id!) {
       return NextResponse.json(
         { error: 'Cannot modify your own account' },
         { status: 400 }
@@ -82,7 +84,7 @@ export async function DELETE(
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!user) {
@@ -93,7 +95,7 @@ export async function DELETE(
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: { suspended: false },
       select: {
         id: true,

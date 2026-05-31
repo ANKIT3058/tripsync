@@ -92,8 +92,8 @@ export async function validateLock(lockId: string, userId: string) {
 
 export async function extendLock(lockId: string, userId: string) {
   try {
-    const lock = await validateLock(lockId, userId)
-    
+    await validateLock(lockId, userId)
+
     const newExpiresAt = new Date()
     newExpiresAt.setMinutes(newExpiresAt.getMinutes() + LOCK_DURATION_MINUTES)
 
