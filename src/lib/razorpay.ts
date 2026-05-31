@@ -1,10 +1,30 @@
 import Razorpay from 'razorpay'
 import crypto from 'crypto'
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-})
+let razorpayClient: Razorpay | null = null
+
+/**
+ * Lazily initialize the Razorpay SDK.
+ *
+ * The client is created on first use (inside a request handler) rather than at
+ * module import time. This prevents the constructor from throwing
+ * "`key_id` or `oauthToken` is mandatory" during the Next.js build's
+ * "Collecting page data" phase, where the env vars may not be present.
+ */
+function getRazorpayClient(): Razorpay {
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    throw new Error('Missing Razorpay environment variables')
+  }
+
+  if (!razorpayClient) {
+    razorpayClient = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    })
+  }
+
+  return razorpayClient
+}
 
 export interface RazorpayOrderData {
   amount: number
@@ -22,7 +42,7 @@ export async function createRazorpayOrder(data: RazorpayOrderData) {
       notes: data.notes || {},
     }
 
-    const order = await razorpay.orders.create(options)
+    const order = await getRazorpayClient().orders.create(options)
     return order
   } catch (error) {
     console.error('Razorpay order creation error:', error)
@@ -51,7 +71,7 @@ export function verifyRazorpaySignature(
 
 export async function getRazorpayPayment(paymentId: string) {
   try {
-    const payment = await razorpay.payments.fetch(paymentId)
+    const payment = await getRazorpayClient().payments.fetch(paymentId)
     return payment
   } catch (error) {
     console.error('Error fetching payment details:', error)
@@ -66,7 +86,7 @@ export async function refundPayment(paymentId: string, amount?: number) {
       refundData.amount = Math.round(amount * 100) // Convert to paise
     }
 
-    const refund = await razorpay.payments.refund(paymentId, refundData)
+    const refund = await getRazorpayClient().payments.refund(paymentId, refundData)
     return refund
   } catch (error) {
     console.error('Refund error:', error)
